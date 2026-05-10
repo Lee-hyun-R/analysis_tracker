@@ -36,7 +36,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-访问 http://localhost:8080 即可使用。
+访问 http://localhost:8080 或者 http://192.168.0.130:8080即可使用。
 
 ### 打包为桌面应用
 
