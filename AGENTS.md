@@ -13,13 +13,13 @@ python main.py        # desktop launcher (auto-opens browser, 127.0.0.1:8080, no
 ./build.sh            # build standalone executable via PyInstaller
 ```
 
-No tests, linter, formatter, or CI exist. There is no `.git` directory.
+No tests, linter, formatter, or CI exist.
 
 ## Architecture
 
-- **`app.py`** -- Flask backend (257 lines). REST API + serves `templates/index.html`.
+- **`app.py`** -- Flask backend. REST API + serves `templates/index.html`.
 - **`main.py`** -- PyInstaller entrypoint. Resolves paths for packaged exe, overrides `DATA_DIR`, auto-opens browser, runs Flask.
-- **`templates/index.html`** -- Monolithic SPA (1036 lines) with inline JS/CSS. Uses Tailwind CSS and Chart.js from CDNs.
+- **`templates/index.html`** -- Monolithic SPA with inline JS/CSS. Uses Tailwind CSS and Chart.js from CDNs.
 - **`static/`** -- Empty directory; exists only because `build.spec` bundles it.
 - **`data/`** -- Flat JSON files, one per exam module (`{module}_records.json`) plus `mock_records.json`.
 
@@ -32,6 +32,8 @@ No tests, linter, formatter, or CI exist. There is no `.git` directory.
 - **IDs are re-sequenced on delete** (not stable). Fine for single-user local tool.
 - **No authentication** -- API is fully open.
 - **`build.spec` hiddenimports** include `engineio.async_drivers.threading` -- required for Flask-SocketIO compat even though SocketIO isn't used. Don't trim.
+- **`DATA_PATH` env var** can override the data directory location (checked by `get_data_dir()` in `app.py` after `sys.frozen`).
+- **`==text==` highlight syntax** in reviews: custom Marked.js extension in `index.html` renders `==text==` as `<mark>` tags. Non-obvious if editing review rendering.
 
 ## Data Model
 

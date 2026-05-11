@@ -259,6 +259,18 @@
         .review-card:hover {
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
+        .pagination-btn {
+            transition: all 0.2s ease;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background: #3b82f6;
+            color: white;
+        }
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="flex">
@@ -461,6 +473,7 @@
                         <tbody id="recordsTable"></tbody>
                     </table>
                 </div>
+                <div id="modulePagination" class="flex items-center justify-center space-x-3 mt-4"></div>
             </div>
 
             <!-- Review Section -->
@@ -499,7 +512,7 @@
                                        class="input-field px-3 py-1.5 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500 text-sm">
                             </div>
                         </div>
-                        <button onclick="addModuleReview()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium">
+                        <button onclick="addModuleReview()" id="saveReviewBtn" class="btn-primary text-white px-4 py-2 rounded-lg font-medium">
                             保存复盘
                         </button>
                     </div>
@@ -642,6 +655,7 @@
                         <tbody id="mockTable"></tbody>
                     </table>
                 </div>
+                <div id="mockPagination" class="flex items-center justify-center space-x-3 mt-4"></div>
             </div>
         </div>
 
@@ -752,6 +766,9 @@
         let correctChart = null;
         let timeChart = null;
         let mockChart = null;
+        const PAGE_SIZE = 10;
+        let modulePageNum = 1;
+        let mockPageNum = 1;
         
         const MODULES = {
             'ziliao': { name: '资料分析', total: 20 },
@@ -820,6 +837,7 @@
             try {
                 const response = await fetch(`/api/${module}/records`);
                 currentRecords = await response.json();
+                modulePageNum = Math.max(1, Math.ceil(currentRecords.length / PAGE_SIZE));
                 updateModuleCharts();
                 updateModuleTable();
                 updateModuleStats();
@@ -856,9 +874,11 @@
         });
 
         function updateModuleCharts() {
-            const labels = currentRecords.map((r, i) => `第${i + 1}次`);
-            const correctData = currentRecords.map(r => r.correct_count);
-            const timeData = currentRecords.map(r => r.time_minutes);
+            const chartRecords = currentRecords.slice(-10);
+            const offset = currentRecords.length - chartRecords.length;
+            const labels = chartRecords.map((r, i) => `第${offset + i + 1}次`);
+            const correctData = chartRecords.map(r => r.correct_count);
+            const timeData = chartRecords.map(r => r.time_minutes);
 
             if (correctChart) correctChart.destroy();
             if (timeChart) timeChart.destroy();
@@ -932,12 +952,17 @@
             tbody.innerHTML = '';
             const total = MODULES[currentPage].total;
 
-            currentRecords.forEach((record, index) => {
+            const totalPages = Math.max(1, Math.ceil(currentRecords.length / PAGE_SIZE));
+            if (modulePageNum > totalPages) modulePageNum = totalPages;
+            const startIdx = (modulePageNum - 1) * PAGE_SIZE;
+            const pageRecords = currentRecords.slice().reverse().slice(startIdx, startIdx + PAGE_SIZE);
+
+            pageRecords.forEach((record) => {
                 const accuracy = ((record.correct_count / total) * 100).toFixed(1);
                 const row = document.createElement('tr');
                 row.className = 'table-row border-b border-gray-100';
                 row.innerHTML = `
-                    <td class="py-3 px-4 font-medium">${record.practice_number || index + 1}</td>
+                    <td class="py-3 px-4 font-medium">${record.practice_number || record.id}</td>
                     <td class="py-3 px-4 text-gray-600">${record.date}</td>
                     <td class="py-3 px-4">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -971,6 +996,25 @@
                     </td>
                 `;
                 tbody.appendChild(row);
+            });
+
+            renderPagination('modulePagination', totalPages, modulePageNum, (p) => { modulePageNum = p; updateModuleTable(); });
+        }
+
+        function renderPagination(containerId, totalPages, currentPageNum, onPageChange) {
+            const container = document.getElementById(containerId);
+            if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+            let html = `<button class="pagination-btn px-3 py-1.5 text-sm rounded-lg border border-gray-300" ${currentPageNum <= 1 ? 'disabled' : ''} data-page="${currentPageNum - 1}">上一页</button>`;
+            html += `<span class="text-sm text-gray-600">第 ${currentPageNum} / ${totalPages} 页</span>`;
+            html += `<button class="pagination-btn px-3 py-1.5 text-sm rounded-lg border border-gray-300" ${currentPageNum >= totalPages ? 'disabled' : ''} data-page="${currentPageNum + 1}">下一页</button>`;
+            container.innerHTML = html;
+
+            container.querySelectorAll('.pagination-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const p = parseInt(btn.dataset.page);
+                    if (!isNaN(p)) onPageChange(p);
+                });
             });
         }
 
@@ -1049,6 +1093,7 @@
             try {
                 const response = await fetch('/api/mock/records');
                 mockRecords = await response.json();
+                mockPageNum = Math.max(1, Math.ceil(mockRecords.length / PAGE_SIZE));
                 updateMockCharts();
                 updateMockTable();
                 updateMockStats();
@@ -1092,9 +1137,11 @@
         });
 
         function updateMockCharts() {
-            const labels = mockRecords.map((r, i) => `第${i + 1}次`);
-            const scoreData = mockRecords.map(r => r.total_correct);
-            const accuracyData = mockRecords.map(r => r.accuracy);
+            const chartRecords = mockRecords.slice(-10);
+            const offset = mockRecords.length - chartRecords.length;
+            const labels = chartRecords.map((r, i) => `第${offset + i + 1}次`);
+            const scoreData = chartRecords.map(r => r.total_correct);
+            const accuracyData = chartRecords.map(r => r.accuracy);
 
             if (mockChart) mockChart.destroy();
 
@@ -1161,14 +1208,19 @@
             const tbody = document.getElementById('mockTable');
             tbody.innerHTML = '';
 
-            mockRecords.forEach((record, index) => {
+            const totalPages = Math.max(1, Math.ceil(mockRecords.length / PAGE_SIZE));
+            if (mockPageNum > totalPages) mockPageNum = totalPages;
+            const startIdx = (mockPageNum - 1) * PAGE_SIZE;
+            const pageRecords = mockRecords.slice().reverse().slice(startIdx, startIdx + PAGE_SIZE);
+
+            pageRecords.forEach((record) => {
                 const row = document.createElement('tr');
                 row.className = 'table-row border-b border-gray-100';
                 
                 const modules = record.modules || {};
                 
                 row.innerHTML = `
-                    <td class="py-3 px-3 font-medium">${record.mock_number || index + 1}</td>
+                    <td class="py-3 px-3 font-medium">${record.mock_number || record.id}</td>
                     <td class="py-3 px-3 text-gray-600">${record.date}</td>
                     <td class="py-3 px-3 text-gray-600">${modules.ziliao?.correct_count || 0}/20</td>
                     <td class="py-3 px-3 text-gray-600">${modules.yanyu?.correct_count || 0}/30</td>
@@ -1196,6 +1248,8 @@
                 `;
                 tbody.appendChild(row);
             });
+
+            renderPagination('mockPagination', totalPages, mockPageNum, (p) => { mockPageNum = p; updateMockTable(); });
         }
 
         function updateMockStats() {
@@ -1283,6 +1337,7 @@
         // Review Functions
         let currentReviews = [];
         let allCombinedReviews = [];
+        let editingReviewId = null;
 
         // Toggle preview for module reviews
         function togglePreview(type) {
@@ -1327,15 +1382,25 @@
             };
 
             try {
-                const response = await fetch(`/api/${currentPage}/reviews`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+                let response;
+                if (editingReviewId) {
+                    response = await fetch(`/api/${currentPage}/reviews/${editingReviewId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    response = await fetch(`/api/${currentPage}/reviews`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
 
                 if (response.ok) {
                     document.getElementById('moduleReviewContent').value = '';
                     document.getElementById('reviewPracticeNumber').value = '';
+                    cancelEditReview();
                     loadModuleReviews(currentPage);
                 }
             } catch (error) {
@@ -1353,7 +1418,7 @@
                 return;
             }
 
-            currentReviews.reverse().forEach(review => {
+            currentReviews.slice().reverse().forEach(review => {
                 const card = document.createElement('div');
                 card.className = 'review-card glass-card rounded-lg p-4';
                 card.innerHTML = `
@@ -1384,15 +1449,35 @@
             const review = currentReviews.find(r => r.id === reviewId);
             if (!review) return;
 
+            editingReviewId = reviewId;
             document.getElementById('moduleReviewContent').value = review.content;
             document.getElementById('reviewPracticeNumber').value = review.practice_number;
             document.getElementById('reviewDate').value = review.date;
 
-            // Scroll to editor
-            document.getElementById('moduleReviewContent').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('saveReviewBtn').textContent = '更新复盘';
 
-            // Delete the old review
-            await deleteModuleReview(reviewId, false);
+            let cancelBtn = document.getElementById('cancelEditBtn');
+            if (!cancelBtn) {
+                cancelBtn = document.createElement('button');
+                cancelBtn.id = 'cancelEditBtn';
+                cancelBtn.className = 'text-gray-500 hover:text-gray-700 text-sm ml-2';
+                cancelBtn.textContent = '取消编辑';
+                cancelBtn.onclick = cancelEditReview;
+                document.getElementById('saveReviewBtn').parentNode.appendChild(cancelBtn);
+            }
+            cancelBtn.classList.remove('hidden');
+
+            document.getElementById('moduleReviewContent').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEditReview() {
+            editingReviewId = null;
+            document.getElementById('moduleReviewContent').value = '';
+            document.getElementById('reviewPracticeNumber').value = '';
+            document.getElementById('reviewDate').value = '';
+            document.getElementById('saveReviewBtn').textContent = '保存复盘';
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            if (cancelBtn) cancelBtn.classList.add('hidden');
         }
 
         // Delete module review
