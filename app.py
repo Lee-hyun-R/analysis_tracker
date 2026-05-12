@@ -283,6 +283,8 @@ def update_module_review(module, review_id):
     for review in reviews:
         if review['id'] == review_id:
             review['content'] = data.get('content', review['content'])
+            review['date'] = data.get('date', review.get('date', ''))
+            review['practice_number'] = data.get('practice_number', review.get('practice_number', review['id']))
             review['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             save_reviews(module, reviews)
             return jsonify(review)
@@ -342,6 +344,8 @@ def update_mock_review(review_id):
     for review in reviews:
         if review['id'] == review_id:
             review['content'] = data.get('content', review['content'])
+            review['date'] = data.get('date', review.get('date', ''))
+            review['mock_number'] = data.get('mock_number', review.get('mock_number', review['id']))
             review['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             save_mock_reviews(reviews)
             return jsonify(review)
