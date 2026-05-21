@@ -275,13 +275,35 @@
 </head>
 <body class="flex">
     <!-- Sidebar -->
-    <aside class="sidebar w-64 min-h-screen p-4 flex flex-col">
+    <aside class="sidebar w-64 min-h-screen p-4 flex flex-col overflow-y-auto">
         <div class="mb-8">
             <h1 class="text-white text-xl font-bold">国考行测追踪</h1>
             <p class="text-slate-400 text-sm mt-1">练习记录与分析</p>
         </div>
         
         <nav class="flex-1">
+            <!-- Streak Display -->
+            <div id="streakDisplay" class="mb-6 px-3 py-3 rounded-lg bg-slate-800/50 border border-slate-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-slate-400">练习连续打卡</span>
+                    <span id="streakFire" class="text-lg"></span>
+                </div>
+                <div class="flex items-baseline space-x-1 mb-2">
+                    <span id="streakCount" class="text-2xl font-bold text-white">0</span>
+                    <span class="text-sm text-slate-400">天</span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400">
+                    <span>累计 <span id="streakTotal" class="text-slate-300">0</span> 天</span>
+                    <span>最长 <span id="streakLongest" class="text-slate-300">0</span> 天</span>
+                </div>
+                <div id="streakToday" class="mt-2 text-xs text-center py-1 rounded bg-emerald-500/20 text-emerald-400 hidden">
+                    今日已打卡
+                </div>
+                <div id="streakMissed" class="mt-2 text-xs text-center py-1 rounded bg-amber-500/20 text-amber-400 hidden">
+                    今日还未练习哦
+                </div>
+            </div>
+            
             <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3 px-3">分项练习</div>
             
             <a href="#" class="sidebar-item active flex items-center text-white rounded-lg px-3 py-2.5 mb-1" data-page="ziliao">
@@ -343,17 +365,17 @@
                 </svg>
                 复盘总览
             </a>
-        </nav>
-        
-        <div class="mt-auto pt-4 border-t border-slate-700">
-            <a href="#" class="sidebar-item flex items-center text-slate-300 rounded-lg px-3 py-2.5" data-page="settings">
+            
+            <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3 mt-6 px-3">数据管理</div>
+            
+            <a href="#" class="sidebar-item flex items-center text-slate-300 rounded-lg px-3 py-2.5 mb-1" data-page="settings">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 数据管理
             </a>
-        </div>
+        </nav>
     </aside>
 
     <!-- Main Content -->
@@ -837,7 +859,7 @@
             try {
                 const response = await fetch(`/api/${module}/records`);
                 currentRecords = await response.json();
-                modulePageNum = Math.max(1, Math.ceil(currentRecords.length / PAGE_SIZE));
+                modulePageNum = 1;
                 updateModuleCharts();
                 updateModuleTable();
                 updateModuleStats();
@@ -867,6 +889,7 @@
                     document.getElementById('addRecordForm').reset();
                     document.getElementById('practiceDate').valueAsDate = new Date();
                     loadModuleData(currentPage);
+                    loadStreak();
                 }
             } catch (error) {
                 console.error('Error adding record:', error);
@@ -1093,7 +1116,7 @@
             try {
                 const response = await fetch('/api/mock/records');
                 mockRecords = await response.json();
-                mockPageNum = Math.max(1, Math.ceil(mockRecords.length / PAGE_SIZE));
+                mockPageNum = 1;
                 updateMockCharts();
                 updateMockTable();
                 updateMockStats();
@@ -1130,6 +1153,7 @@
                     document.getElementById('addMockForm').reset();
                     document.getElementById('mockDate').valueAsDate = new Date();
                     loadMockData();
+                    loadStreak();
                 }
             } catch (error) {
                 console.error('Error adding mock record:', error);
@@ -1333,6 +1357,50 @@
         document.getElementById('practiceDate').valueAsDate = new Date();
         document.getElementById('mockDate').valueAsDate = new Date();
         navigateTo('ziliao');
+        loadStreak();
+
+        async function loadStreak() {
+            try {
+                const response = await fetch('/api/streak');
+                const data = await response.json();
+                
+                const streakCount = document.getElementById('streakCount');
+                const streakFire = document.getElementById('streakFire');
+                const streakTotal = document.getElementById('streakTotal');
+                const streakLongest = document.getElementById('streakLongest');
+                const streakToday = document.getElementById('streakToday');
+                const streakMissed = document.getElementById('streakMissed');
+                
+                streakCount.textContent = data.current_streak;
+                streakTotal.textContent = data.total_days;
+                streakLongest.textContent = data.longest_streak;
+                
+                streakCount.className = 'text-2xl font-bold text-white';
+                if (data.current_streak >= 7) {
+                    streakFire.textContent = '🔥';
+                    streakCount.classList.add('text-orange-400');
+                } else if (data.current_streak >= 3) {
+                    streakFire.textContent = '✨';
+                    streakCount.classList.add('text-yellow-400');
+                } else if (data.current_streak > 0) {
+                    streakFire.textContent = '⭐';
+                    streakCount.classList.add('text-blue-400');
+                } else {
+                    streakFire.textContent = '💤';
+                    streakCount.classList.add('text-slate-500');
+                }
+                
+                if (data.today_practiced) {
+                    streakToday.classList.remove('hidden');
+                    streakMissed.classList.add('hidden');
+                } else {
+                    streakToday.classList.add('hidden');
+                    streakMissed.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading streak:', error);
+            }
+        }
 
         // Review Functions
         let currentReviews = [];

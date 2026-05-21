@@ -444,5 +444,70 @@ def get_module_stats(module):
         'trend': trend
     })
 
+@app.route('/api/streak', methods=['GET'])
+def get_streak():
+    from datetime import datetime, timedelta
+    
+    all_dates = set()
+    
+    for module in MODULES:
+        records = load_data(module)
+        for r in records:
+            if 'date' in r:
+                all_dates.add(r['date'])
+    
+    mock_records = load_mock_data()
+    for r in mock_records:
+        if 'date' in r:
+            all_dates.add(r['date'])
+    
+    if not all_dates:
+        return jsonify({
+            'current_streak': 0,
+            'longest_streak': 0,
+            'total_days': 0,
+            'today_practiced': False
+        })
+    
+    sorted_dates = sorted(all_dates, reverse=True)
+    today = datetime.now().strftime('%Y-%m-%d')
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    today_practiced = today in all_dates
+    
+    current_streak = 0
+    if today_practiced:
+        check_date = datetime.now()
+    elif yesterday in all_dates:
+        check_date = datetime.now() - timedelta(days=1)
+    else:
+        check_date = None
+    
+    if check_date:
+        while check_date.strftime('%Y-%m-%d') in all_dates:
+            current_streak += 1
+            check_date -= timedelta(days=1)
+    
+    longest_streak = 0
+    if sorted_dates:
+        sorted_asc = sorted(all_dates)
+        streak = 1
+        for i in range(1, len(sorted_asc)):
+            prev = datetime.strptime(sorted_asc[i-1], '%Y-%m-%d')
+            curr = datetime.strptime(sorted_asc[i], '%Y-%m-%d')
+            if (curr - prev).days == 1:
+                streak += 1
+            else:
+                longest_streak = max(longest_streak, streak)
+                streak = 1
+        longest_streak = max(longest_streak, streak)
+    
+    return jsonify({
+        'current_streak': current_streak,
+        'longest_streak': longest_streak,
+        'total_days': len(all_dates),
+        'today_practiced': today_practiced
+    })
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=8080)
