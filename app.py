@@ -370,6 +370,82 @@ def clear_mock_reviews():
     save_mock_reviews([])
     return jsonify({'message': 'Mock reviews cleared'})
 
+# 题解 API
+def get_solution_file(module):
+    return os.path.join(DATA_DIR, f'{module}_solutions.json')
+
+def load_solutions(module):
+    filepath = get_solution_file(module)
+    if os.path.exists(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_solutions(module, solutions):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    filepath = get_solution_file(module)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(solutions, f, ensure_ascii=False, indent=2)
+
+@app.route('/api/<module>/solutions', methods=['GET'])
+def get_module_solutions(module):
+    if module != 'mock' and module not in MODULES:
+        return jsonify({'error': 'Module not found'}), 404
+    return jsonify(load_solutions(module))
+
+@app.route('/api/<module>/solutions', methods=['POST'])
+def add_module_solution(module):
+    if module != 'mock' and module not in MODULES:
+        return jsonify({'error': 'Module not found'}), 404
+
+    data = request.get_json()
+    solutions = load_solutions(module)
+
+    new_solution = {
+        'id': len(solutions) + 1,
+        'record_id': data.get('record_id', len(solutions) + 1),
+        'title': data.get('title', ''),
+        'content': data.get('content', ''),
+        'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+
+    solutions.append(new_solution)
+    save_solutions(module, solutions)
+    return jsonify(new_solution), 201
+
+@app.route('/api/<module>/solutions/<int:solution_id>', methods=['PUT'])
+def update_module_solution(module, solution_id):
+    if module != 'mock' and module not in MODULES:
+        return jsonify({'error': 'Module not found'}), 404
+
+    data = request.get_json()
+    solutions = load_solutions(module)
+
+    for solution in solutions:
+        if solution['id'] == solution_id:
+            solution['record_id'] = data.get('record_id', solution['record_id'])
+            solution['title'] = data.get('title', solution['title'])
+            solution['content'] = data.get('content', solution['content'])
+            solution['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            save_solutions(module, solutions)
+            return jsonify(solution)
+
+    return jsonify({'error': 'Solution not found'}), 404
+
+@app.route('/api/<module>/solutions/<int:solution_id>', methods=['DELETE'])
+def delete_module_solution(module, solution_id):
+    if module != 'mock' and module not in MODULES:
+        return jsonify({'error': 'Module not found'}), 404
+
+    solutions = load_solutions(module)
+    solutions = [s for s in solutions if s['id'] != solution_id]
+
+    for i, solution in enumerate(solutions):
+        solution['id'] = i + 1
+
+    save_solutions(module, solutions)
+    return jsonify({'message': 'Solution deleted'})
+
 # 合并复盘 API
 @app.route('/api/reviews/combined', methods=['GET'])
 def get_combined_reviews():

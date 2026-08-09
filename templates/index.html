@@ -6,7 +6,7 @@
     <title>国考行测练习追踪</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/lib/marked.umd.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // 配置 marked.js 支持 ==高亮== 语法
@@ -233,6 +233,29 @@
             margin-left: 0;
             margin-bottom: 0.5rem;
             color: #64748b;
+        }
+        
+        .markdown-preview a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        
+        .markdown-preview img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .markdown-preview hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 1rem 0;
+        }
+        
+        .markdown-preview input[type="checkbox"] {
+            margin-right: 0.375rem;
+            accent-color: #3b82f6;
         }
         
         .markdown-preview table {
@@ -489,6 +512,7 @@
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">正确率</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">用时</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">备注</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-700">题解</th>
                                 <th class="text-left py-3 px-4 font-semibold text-gray-700">操作</th>
                             </tr>
                         </thead>
@@ -672,6 +696,7 @@
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">政治</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">总分</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">用时</th>
+                                <th class="text-left py-3 px-3 font-semibold text-gray-700">题解</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">操作</th>
                             </tr>
                         </thead>
@@ -781,11 +806,64 @@
         </div>
     </div>
 
+    <!-- Solution Modal -->
+    <div id="solutionModal" class="fixed inset-0 hidden z-50">
+        <div class="modal-overlay absolute inset-0" onclick="hideSolutionModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900" id="solutionModalTitle">写题解</h3>
+                    <button onclick="hideSolutionModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-3 mb-4">
+                    <span id="solutionModuleBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"></span>
+                    <span id="solutionRecordBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">题解标题</label>
+                    <input type="text" id="solutionTitle" placeholder="如: 第3次资料分析详细题解"
+                           class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">导入本地 Markdown 文件</label>
+                    <input type="file" id="solutionFileInput" accept=".md,.markdown,.txt" onchange="importSolutionFile()" class="text-sm">
+                    <p class="text-xs text-gray-500 mt-1">选择你本地写好的 .md 文件，内容会自动填入下方编辑器</p>
+                </div>
+
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-medium text-gray-700">题解内容 (Markdown)</label>
+                    <button id="solutionPreviewToggle" onclick="toggleSolutionPreview()" class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        预览
+                    </button>
+                </div>
+                <textarea id="solutionContent" rows="16"
+                          class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500 font-mono text-sm"
+                          placeholder="# 题目概括&#10;&#10;## 解题思路&#10;&#10;## 详细解答&#10;&#10;## 易错点分析"></textarea>
+                <div id="solutionPreview" class="markdown-preview hidden mt-2"></div>
+
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button onclick="hideSolutionModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                    <button onclick="deleteSolution()" id="deleteSolutionBtn" class="px-4 py-2 text-red-500 hover:text-red-700 hidden">删除题解</button>
+                    <button onclick="saveSolution()" class="btn-primary text-white px-4 py-2 rounded-lg font-medium">保存题解</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // State
         let currentPage = 'ziliao';
         let currentRecords = [];
         let mockRecords = [];
+        let currentSolutions = [];
+        let mockSolutions = [];
         let correctChart = null;
         let timeChart = null;
         let mockChart = null;
@@ -864,8 +942,19 @@
                 updateModuleCharts();
                 updateModuleTable();
                 updateModuleStats();
+                loadModuleSolutions(module);
             } catch (error) {
                 console.error('Error loading records:', error);
+            }
+        }
+
+        async function loadModuleSolutions(module) {
+            try {
+                const response = await fetch(`/api/${module}/solutions`);
+                currentSolutions = await response.json();
+                updateModuleTable();
+            } catch (error) {
+                console.error('Error loading solutions:', error);
             }
         }
 
@@ -1012,6 +1101,16 @@
                     <td class="py-3 px-4 text-gray-600">${record.time_minutes}分钟</td>
                     <td class="py-3 px-4 text-gray-600">${record.notes || '-'}</td>
                     <td class="py-3 px-4">
+                        <button onclick="openSolutionModal('${currentPage}', ${record.practice_number || record.id})"
+                                class="px-2.5 py-1 rounded-lg text-xs font-medium ${
+                                    currentSolutions.some(s => s.record_id === (record.practice_number || record.id)) 
+                                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }">${
+                                    currentSolutions.some(s => s.record_id === (record.practice_number || record.id)) ? '📝 查看题解' : '✏️ 写题解'
+                                }</button>
+                    </td>
+                    <td class="py-3 px-4">
                         <button onclick="deleteModuleRecord(${record.id})" class="text-red-500 hover:text-red-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -1121,8 +1220,19 @@
                 updateMockCharts();
                 updateMockTable();
                 updateMockStats();
+                loadMockSolutions();
             } catch (error) {
                 console.error('Error loading mock data:', error);
+            }
+        }
+
+        async function loadMockSolutions() {
+            try {
+                const response = await fetch('/api/mock/solutions');
+                mockSolutions = await response.json();
+                updateMockTable();
+            } catch (error) {
+                console.error('Error loading mock solutions:', error);
             }
         }
 
@@ -1237,6 +1347,16 @@
                     <td class="py-3 px-3 font-semibold text-blue-600">${record.total_score !== undefined ? record.total_score : (record.total_correct / 135 * 100).toFixed(1)}/100</td>
                     <td class="py-3 px-3 text-gray-600">${record.time_minutes}分钟</td>
                     <td class="py-3 px-3">
+                        <button onclick="openSolutionModal('mock', ${record.mock_number || record.id})"
+                                class="px-2.5 py-1 rounded-lg text-xs font-medium ${
+                                    mockSolutions.some(s => s.record_id === (record.mock_number || record.id)) 
+                                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }">${
+                                    mockSolutions.some(s => s.record_id === (record.mock_number || record.id)) ? '📝 查看题解' : '✏️ 写题解'
+                                }</button>
+                    </td>
+                    <td class="py-3 px-3">
                         <button onclick="deleteMockRecord(${record.id})" class="text-red-500 hover:text-red-700">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -1273,15 +1393,145 @@
             loadMockData();
         }
 
+        // Solution Functions
+        let solutionContext = null;
+        let editingSolutionId = null;
+
+        function openSolutionModal(module, recordId) {
+            solutionContext = { module, recordId };
+
+            const moduleName = module === 'mock' ? '套题记录' : (MODULES[module]?.name || module);
+            document.getElementById('solutionModuleBadge').textContent = moduleName;
+            document.getElementById('solutionRecordBadge').textContent = `第${recordId}次`;
+
+            const solution = (module === 'mock' ? mockSolutions : currentSolutions).find(s => s.record_id === recordId);
+            if (solution) {
+                editingSolutionId = solution.id;
+                document.getElementById('solutionModalTitle').textContent = '查看题解';
+                document.getElementById('solutionTitle').value = solution.title || '';
+                document.getElementById('solutionContent').value = solution.content || '';
+                document.getElementById('deleteSolutionBtn').classList.remove('hidden');
+                setSolutionView('preview');
+            } else {
+                editingSolutionId = null;
+                document.getElementById('solutionModalTitle').textContent = '写题解';
+                document.getElementById('solutionTitle').value = '';
+                document.getElementById('solutionContent').value = '';
+                document.getElementById('deleteSolutionBtn').classList.add('hidden');
+                setSolutionView('edit');
+            }
+
+            document.getElementById('solutionFileInput').value = '';
+            document.getElementById('solutionModal').classList.remove('hidden');
+        }
+
+        function hideSolutionModal() {
+            document.getElementById('solutionModal').classList.add('hidden');
+        }
+
+        function setSolutionView(view) {
+            const preview = document.getElementById('solutionPreview');
+            const content = document.getElementById('solutionContent');
+            const toggleBtn = document.getElementById('solutionPreviewToggle');
+            if (view === 'preview') {
+                preview.innerHTML = marked.parse(content.value || '*（空白内容）*');
+                preview.classList.remove('hidden');
+                content.classList.add('hidden');
+                toggleBtn.textContent = '编辑';
+            } else {
+                preview.classList.add('hidden');
+                content.classList.remove('hidden');
+                toggleBtn.textContent = '预览';
+            }
+        }
+
+        function toggleSolutionPreview() {
+            const preview = document.getElementById('solutionPreview');
+            setSolutionView(preview.classList.contains('hidden') ? 'preview' : 'edit');
+        }
+
+        async function importSolutionFile() {
+            const fileInput = document.getElementById('solutionFileInput');
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+            if (!document.getElementById('solutionTitle').value) {
+                document.getElementById('solutionTitle').value = file.name.replace(/\.(md|markdown|txt)$/i, '');
+            }
+            document.getElementById('solutionContent').value = await file.text();
+            setSolutionView('edit');
+            alert(`已导入 ${file.name}（${file.size} 字节）`);
+        }
+
+        async function saveSolution() {
+            const content = document.getElementById('solutionContent').value.trim();
+            if (!content) {
+                alert('请输入题解内容');
+                return;
+            }
+
+            const data = {
+                record_id: solutionContext.recordId,
+                title: document.getElementById('solutionTitle').value.trim(),
+                content
+            };
+
+            try {
+                let response;
+                if (editingSolutionId) {
+                    response = await fetch(`/api/${solutionContext.module}/solutions/${editingSolutionId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    response = await fetch(`/api/${solutionContext.module}/solutions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
+
+                if (response.ok) {
+                    hideSolutionModal();
+                    if (solutionContext.module === 'mock') {
+                        loadMockSolutions();
+                    } else {
+                        loadModuleSolutions(solutionContext.module);
+                    }
+                    alert('题解已保存');
+                }
+            } catch (error) {
+                console.error('Error saving solution:', error);
+            }
+        }
+
+        async function deleteSolution() {
+            if (!editingSolutionId) return;
+            if (!confirm('确定要删除这条题解吗？')) return;
+
+            await fetch(`/api/${solutionContext.module}/solutions/${editingSolutionId}`, { method: 'DELETE' });
+            hideSolutionModal();
+            if (solutionContext.module === 'mock') {
+                loadMockSolutions();
+            } else {
+                loadModuleSolutions(solutionContext.module);
+            }
+        }
+
         // Export/Import All Data
         async function exportAllData() {
             const allData = {};
             for (const module of Object.keys(MODULES)) {
                 const response = await fetch(`/api/${module}/records`);
                 allData[module] = await response.json();
+                const solutionResponse = await fetch(`/api/${module}/solutions`);
+                allData[`${module}_solutions`] = await solutionResponse.json();
             }
             const mockResponse = await fetch('/api/mock/records');
             allData.mock = await mockResponse.json();
+            const mockSolutionResponse = await fetch('/api/mock/solutions');
+            allData.mock_solutions = await mockSolutionResponse.json();
             
             const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -1306,7 +1556,9 @@
                 
                 for (const [module, records] of Object.entries(data)) {
                     if (module === 'mock') {
-                        // Handle mock import separately if needed
+                        continue;
+                    }
+                    if (module.endsWith('_solutions')) {
                         continue;
                     }
                     if (MODULES[module] && Array.isArray(records)) {

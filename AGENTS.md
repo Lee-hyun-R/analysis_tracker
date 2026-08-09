@@ -23,6 +23,15 @@ No tests, linter, formatter, or CI exist.
 - **`static/`** -- Empty directory; exists only because `build.spec` bundles it.
 - **`data/`** -- Flat JSON files, one per exam module (`{module}_records.json`) plus `mock_records.json`. Gitignored except `.gitkeep`.
 
+## 题解 (Solutions)
+
+题解以 Markdown 内容存储，通过上传本地 `.md` 文件导入，关联到具体练习记录：
+- 数据文件：`{module}_solutions.json` 和 `mock_solutions.json`，位于受 `DATA_DIR` 控制的数据目录。
+- 每条题解：`{id, record_id, title, content, created_at, updated_at}`。`record_id` 关联模块记录的 `practice_number`（套题为 `mock_number`），与复盘（reviews）的关联方式一致。
+- API：`/api/<module>/solutions` 支持 GET/POST/PUT/DELETE（`mock` 也可用，无需单独路由前缀）；`<module>` 非法时返回 404。
+- 前端：模块页与套题页的记录表格都有"题解"列按钮（写题解/查看题解），点击打开 `#solutionModal`，支持导入本地 .md 文件（`importSolutionFile()` 用 FileReader 读入）、Markdown 预览（复用 `marked`、`==高亮==` 扩展和 `.markdown-preview` 样式）、保存/删除。
+- **注意**：删除练习记录不会清理其关联题解（与复盘行为一致，单用户工具可接受）；记录 ID 重排时题解可能错配，暂未处理。
+
 ## Key Quirks
 
 - **Dual DATA_DIR resolution**: `app.py` sets `DATA_DIR` at import time; `main.py` overrides it post-import via `app_module.DATA_DIR = data_path`. This is intentional for PyInstaller path handling.
