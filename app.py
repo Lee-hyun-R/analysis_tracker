@@ -214,11 +214,13 @@ def add_mock_record():
     new_record = {
         'id': len(records) + 1,
         'mock_number': len(records) + 1,
+        'title': data.get('title', ''),
         'date': data.get('date', datetime.now().strftime('%Y-%m-%d')),
         'time_minutes': data.get('time_minutes', 0),
         'modules': modules_data,
         'total_correct': total_correct,
         'total_questions': total_questions,
+        'total_score': round(total_correct / total_questions * 100, 1) if total_questions > 0 else 0,
         'accuracy': round(total_correct / total_questions * 100, 1) if total_questions > 0 else 0,
         'notes': data.get('notes', '')
     }

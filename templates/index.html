@@ -560,7 +560,12 @@
             <div class="glass-card rounded-xl p-6 mb-8 fade-in">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">添加套题记录</h3>
                 <form id="addMockForm">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">标题</label>
+                            <input type="text" id="mockTitle" placeholder="如: 2024国考真题"
+                                   class="input-field w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-500">
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">考试日期</label>
                             <input type="date" id="mockDate"
@@ -621,7 +626,7 @@
             </div>
 
             <!-- Mock Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 fade-in">
                 <div class="stat-card glass-card rounded-xl p-5">
                     <p class="text-sm text-gray-500">总套题次数</p>
                     <p class="text-2xl font-bold text-gray-900" id="mockTotal">0</p>
@@ -629,10 +634,6 @@
                 <div class="stat-card glass-card rounded-xl p-5">
                     <p class="text-sm text-gray-500">平均总分</p>
                     <p class="text-2xl font-bold text-blue-600" id="mockAvgScore">0</p>
-                </div>
-                <div class="stat-card glass-card rounded-xl p-5">
-                    <p class="text-sm text-gray-500">平均正确率</p>
-                    <p class="text-2xl font-bold text-green-600" id="mockAvgAccuracy">0%</p>
                 </div>
                 <div class="stat-card glass-card rounded-xl p-5">
                     <p class="text-sm text-gray-500">最高总分</p>
@@ -661,6 +662,7 @@
                         <thead>
                             <tr class="border-b border-gray-200">
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">次数</th>
+                                <th class="text-left py-3 px-3 font-semibold text-gray-700">标题</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">日期</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">资料</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">言语</th>
@@ -669,7 +671,6 @@
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">常识</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">政治</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">总分</th>
-                                <th class="text-left py-3 px-3 font-semibold text-gray-700">正确率</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">用时</th>
                                 <th class="text-left py-3 px-3 font-semibold text-gray-700">操作</th>
                             </tr>
@@ -1129,6 +1130,7 @@
             e.preventDefault();
             
             const data = {
+                title: document.getElementById('mockTitle').value,
                 date: document.getElementById('mockDate').value || new Date().toISOString().split('T')[0],
                 time_minutes: parseFloat(document.getElementById('mockTime').value),
                 notes: document.getElementById('mockNotes').value,
@@ -1164,8 +1166,8 @@
             const chartRecords = mockRecords.slice(-10);
             const offset = mockRecords.length - chartRecords.length;
             const labels = chartRecords.map((r, i) => `第${offset + i + 1}次`);
-            const scoreData = chartRecords.map(r => r.total_correct);
-            const accuracyData = chartRecords.map(r => r.accuracy);
+            const getScore = r => r.total_score !== undefined ? r.total_score : (r.total_correct / 135 * 100);
+            const scoreData = chartRecords.map(r => getScore(r));
 
             if (mockChart) mockChart.destroy();
 
@@ -1177,24 +1179,13 @@
                     labels,
                     datasets: [
                         {
-                            label: '总正确数',
+                            label: '总分',
                             data: scoreData,
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             borderWidth: 3,
-                            fill: false,
-                            tension: 0.4,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: '正确率(%)',
-                            data: accuracyData,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            borderWidth: 3,
-                            fill: false,
-                            tension: 0.4,
-                            yAxisID: 'y1'
+                            fill: true,
+                            tension: 0.4
                         }
                     ]
                 },
@@ -1207,20 +1198,10 @@
                         y: {
                             type: 'linear',
                             display: true,
-                            position: 'left',
-                            beginAtZero: true,
-                            max: 135,
-                            title: { display: true, text: '总正确数' },
-                            grid: { color: 'rgba(0,0,0,0.05)' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
                             beginAtZero: true,
                             max: 100,
-                            title: { display: true, text: '正确率(%)' },
-                            grid: { drawOnChartArea: false }
+                            title: { display: true, text: '总分' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
                         },
                         x: { grid: { display: false } }
                     }
@@ -1245,6 +1226,7 @@
                 
                 row.innerHTML = `
                     <td class="py-3 px-3 font-medium">${record.mock_number || record.id}</td>
+                    <td class="py-3 px-3 text-gray-600">${record.title || '-'}</td>
                     <td class="py-3 px-3 text-gray-600">${record.date}</td>
                     <td class="py-3 px-3 text-gray-600">${modules.ziliao?.correct_count || 0}/20</td>
                     <td class="py-3 px-3 text-gray-600">${modules.yanyu?.correct_count || 0}/30</td>
@@ -1252,15 +1234,7 @@
                     <td class="py-3 px-3 text-gray-600">${modules.shuliang?.correct_count || 0}/15</td>
                     <td class="py-3 px-3 text-gray-600">${modules.changshi?.correct_count || 0}/15</td>
                     <td class="py-3 px-3 text-gray-600">${modules.zhengzhi?.correct_count || 0}/20</td>
-                    <td class="py-3 px-3 font-semibold text-blue-600">${record.total_correct}/135</td>
-                    <td class="py-3 px-3">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            record.accuracy >= 80 ? 'bg-green-100 text-green-800' :
-                            record.accuracy >= 60 ? 'bg-blue-100 text-blue-800' :
-                            record.accuracy >= 40 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                        }">${record.accuracy}%</span>
-                    </td>
+                    <td class="py-3 px-3 font-semibold text-blue-600">${record.total_score !== undefined ? record.total_score : (record.total_correct / 135 * 100).toFixed(1)}/100</td>
                     <td class="py-3 px-3 text-gray-600">${record.time_minutes}分钟</td>
                     <td class="py-3 px-3">
                         <button onclick="deleteMockRecord(${record.id})" class="text-red-500 hover:text-red-700">
@@ -1278,13 +1252,12 @@
 
         function updateMockStats() {
             const total = mockRecords.length;
-            const avgScore = total > 0 ? (mockRecords.reduce((s, r) => s + r.total_correct, 0) / total).toFixed(1) : 0;
-            const avgAccuracy = total > 0 ? (mockRecords.reduce((s, r) => s + r.accuracy, 0) / total).toFixed(1) : 0;
-            const bestScore = total > 0 ? Math.max(...mockRecords.map(r => r.total_correct)) : 0;
+            const getScore = r => r.total_score !== undefined ? r.total_score : (r.total_correct / 135 * 100);
+            const avgScore = total > 0 ? (mockRecords.reduce((s, r) => s + getScore(r), 0) / total).toFixed(1) : 0;
+            const bestScore = total > 0 ? Math.max(...mockRecords.map(r => getScore(r))).toFixed(1) : 0;
 
             document.getElementById('mockTotal').textContent = total;
             document.getElementById('mockAvgScore').textContent = avgScore;
-            document.getElementById('mockAvgAccuracy').textContent = `${avgAccuracy}%`;
             document.getElementById('mockBestScore').textContent = bestScore;
         }
 
